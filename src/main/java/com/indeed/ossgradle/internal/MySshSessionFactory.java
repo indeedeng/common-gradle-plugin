@@ -34,57 +34,90 @@ public class MySshSessionFactory extends SshdSessionFactory {
     // we actually register the ssh agent factory, because it can't find is using
     // ServiceLoader in gradle for some reason.
     @Override
-    public SshdSession getSession(final URIish uri, final CredentialsProvider credentialsProvider, final FS fs, final int tms) throws TransportException {
+    public SshdSession getSession(
+            final URIish uri,
+            final CredentialsProvider credentialsProvider,
+            final FS fs,
+            final int tms)
+            throws TransportException {
         SshdSession session = null;
         try {
-            session = construct(SshdSession.class, uri, (Supplier<SshClient>)() -> {
-                File home = getHomeDirectory();
-                if (home == null) {
-                    // Always use the detected filesystem for the user home!
-                    // It makes no sense to have different "user home"
-                    // directories depending on what file system a repository
-                    // is.
-                    home = FS.DETECTED.userHome();
-                }
-                File sshDir = getSshDirectory();
-                if (sshDir == null) {
-                    sshDir = new File(home, SshConstants.SSH_DIR);
-                }
-                HostConfigEntryResolver configFile = invoke(this, "getHostConfigEntryResolver",
-                        home, sshDir);
-                KeyIdentityProvider defaultKeysProvider = invoke(this, "toKeyIdentityProvider",
-                        getDefaultKeys(sshDir));
-                SshClient client = ClientBuilder.builder()
-                        .factory(JGitSshClient::new)
-                        .filePasswordProvider(invoke(this, "createFilePasswordProvider",
-                                (Supplier< KeyPasswordProvider >)() -> createKeyPasswordProvider(
-                                        credentialsProvider)))
-                        .hostConfigEntryResolver(configFile)
-                        .serverKeyVerifier(new JGitServerKeyVerifier(
-                                getServerKeyDatabase(home, sshDir)))
-                        .signatureFactories(invoke(this, "getSignatureFactories"))
-                        .compressionFactories(
-                                new ArrayList<>(BuiltinCompressions.VALUES))
-                        .build();
-                client.setUserInteraction(
-                        new JGitUserInteraction(credentialsProvider));
-                client.setUserAuthFactories(invoke(this, "getUserAuthFactories"));
-                client.setKeyIdentityProvider(defaultKeysProvider);
-                client.setAgentFactory(new JGitSshAgentFactory(new Factory(), home));
-                // JGit-specific things:
-                JGitSshClient jgitClient = (JGitSshClient) client;
-                jgitClient.setKeyCache(getKeyCache());
-                jgitClient.setCredentialsProvider(credentialsProvider);
-                jgitClient.setProxyDatabase(readField(this, "proxies"));
-                String defaultAuths = getDefaultPreferredAuthentications();
-                if (defaultAuths != null) {
-                    jgitClient.setAttribute(
-                            JGitSshClient.PREFERRED_AUTHENTICATIONS,
-                            defaultAuths);
-                }
-                // Other things?
-                return client;
-            });
+            session =
+                    construct(
+                            SshdSession.class,
+                            uri,
+                            (Supplier<SshClient>)
+                                    () -> {
+                                        File home = getHomeDirectory();
+                                        if (home == null) {
+                                            // Always use the detected filesystem for the user home!
+                                            // It makes no sense to have different "user home"
+                                            // directories depending on what file system a
+                                            // repository
+                                            // is.
+                                            home = FS.DETECTED.userHome();
+                                        }
+                                        File sshDir = getSshDirectory();
+                                        if (sshDir == null) {
+                                            sshDir = new File(home, SshConstants.SSH_DIR);
+                                        }
+                                        HostConfigEntryResolver configFile =
+                                                invoke(
+                                                        this,
+                                                        "getHostConfigEntryResolver",
+                                                        home,
+                                                        sshDir);
+                                        KeyIdentityProvider defaultKeysProvider =
+                                                invoke(
+                                                        this,
+                                                        "toKeyIdentityProvider",
+                                                        getDefaultKeys(sshDir));
+                                        SshClient client =
+                                                ClientBuilder.builder()
+                                                        .factory(JGitSshClient::new)
+                                                        .filePasswordProvider(
+                                                                invoke(
+                                                                        this,
+                                                                        "createFilePasswordProvider",
+                                                                        (Supplier<
+                                                                                        KeyPasswordProvider>)
+                                                                                () ->
+                                                                                        createKeyPasswordProvider(
+                                                                                                credentialsProvider)))
+                                                        .hostConfigEntryResolver(configFile)
+                                                        .serverKeyVerifier(
+                                                                new JGitServerKeyVerifier(
+                                                                        getServerKeyDatabase(
+                                                                                home, sshDir)))
+                                                        .signatureFactories(
+                                                                invoke(
+                                                                        this,
+                                                                        "getSignatureFactories"))
+                                                        .compressionFactories(
+                                                                new ArrayList<>(
+                                                                        BuiltinCompressions.VALUES))
+                                                        .build();
+                                        client.setUserInteraction(
+                                                new JGitUserInteraction(credentialsProvider));
+                                        client.setUserAuthFactories(
+                                                invoke(this, "getUserAuthFactories"));
+                                        client.setKeyIdentityProvider(defaultKeysProvider);
+                                        client.setAgentFactory(
+                                                new JGitSshAgentFactory(new Factory(), home));
+                                        // JGit-specific things:
+                                        JGitSshClient jgitClient = (JGitSshClient) client;
+                                        jgitClient.setKeyCache(getKeyCache());
+                                        jgitClient.setCredentialsProvider(credentialsProvider);
+                                        jgitClient.setProxyDatabase(readField(this, "proxies"));
+                                        String defaultAuths = getDefaultPreferredAuthentications();
+                                        if (defaultAuths != null) {
+                                            jgitClient.setAttribute(
+                                                    JGitSshClient.PREFERRED_AUTHENTICATIONS,
+                                                    defaultAuths);
+                                        }
+                                        // Other things?
+                                        return client;
+                                    });
             session.addCloseListener(s -> invoke(this, "unregister", s));
             invoke(this, "register", session);
             invoke(session, "connect", Duration.ofMillis(tms));
@@ -95,8 +128,8 @@ public class MySshSessionFactory extends SshdSessionFactory {
                 throw (TransportException) e;
             }
             Throwable cause = e;
-            if (e instanceof SshException && e
-                    .getCause() instanceof AuthenticationCanceledException) {
+            if (e instanceof SshException
+                    && e.getCause() instanceof AuthenticationCanceledException) {
                 // Results in a nicer error message
                 cause = e.getCause();
             }
@@ -105,31 +138,27 @@ public class MySshSessionFactory extends SshdSessionFactory {
     }
 
     private static <T> T construct(final Class<T> cls, Object... args) {
-        Constructor<T> constructor= (Constructor<T>) cls.getDeclaredConstructors()[0];
+        Constructor<T> constructor = (Constructor<T>) cls.getDeclaredConstructors()[0];
         constructor.setAccessible(true);
         try {
             return constructor.newInstance(args);
-        } catch(final Exception e) {
+        } catch (final Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static <T> T invoke(
-            final Object object,
-            final String methodName,
-            Object... args
-    ) {
+    private static <T> T invoke(final Object object, final String methodName, Object... args) {
         try {
-            return (T)MethodUtils.invokeMethod(object, true, methodName, args);
-        } catch(final Exception e) {
+            return (T) MethodUtils.invokeMethod(object, true, methodName, args);
+        } catch (final Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     private static <T> T readField(final Object target, final String fieldName) {
         try {
-            return (T)FieldUtils.readField(target, fieldName, true);
-        } catch(final Exception e) {
+            return (T) FieldUtils.readField(target, fieldName, true);
+        } catch (final Exception e) {
             throw new RuntimeException(e);
         }
     }

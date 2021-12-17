@@ -15,13 +15,16 @@ public class IndeedOssLibraryExtension {
 
         name = project.getObjects().property(String.class);
         name.finalizeValueOnRead();
-        name.set(project.provider(() -> {
-            final ExtraPropertiesExtension ext = project.getExtensions().getExtraProperties();
-            if (ext.has("indeed.publish.name")) {
-                return (String)ext.get("indeed.publish.name");
-            }
-            throw new IllegalArgumentException("indeedPublish.name must be set");
-        }));
+        name.set(
+                project.provider(
+                        () -> {
+                            final ExtraPropertiesExtension ext =
+                                    project.getExtensions().getExtraProperties();
+                            if (ext.has("indeed.publish.name")) {
+                                return (String) ext.get("indeed.publish.name");
+                            }
+                            throw new IllegalArgumentException("indeedPublish.name must be set");
+                        }));
     }
 
     public Property<String> getGroup() {

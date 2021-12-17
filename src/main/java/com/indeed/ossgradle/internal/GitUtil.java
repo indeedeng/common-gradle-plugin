@@ -129,14 +129,17 @@ public class GitUtil {
 
     public static Collection<String> getTags(final Project project) {
         final List<String> tags = new ArrayList<>();
-        withGit(project, git -> {
-            final Collection<Ref> remoteTags = configureSsh(git.lsRemote()).setTags(true).call();
-            tags.addAll(
-                    remoteTags.stream()
-                            .map(Ref::getName)
-                            .map(name -> StringUtils.removeStart(name, "refs/tags/"))
-                            .collect(Collectors.toList()));
-        });
+        withGit(
+                project,
+                git -> {
+                    final Collection<Ref> remoteTags =
+                            configureSsh(git.lsRemote()).setTags(true).call();
+                    tags.addAll(
+                            remoteTags.stream()
+                                    .map(Ref::getName)
+                                    .map(name -> StringUtils.removeStart(name, "refs/tags/"))
+                                    .collect(Collectors.toList()));
+                });
         return tags;
     }
 

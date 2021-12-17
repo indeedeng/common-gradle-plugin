@@ -8,7 +8,7 @@ if (projectDir.toString().contains("buildSrc")) {
         vcsUrl = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
         tags = ['indeed', 'opensource']
     }
-    indeedPublish {
+    indeedLibrary {
         name = 'indeed-oss-gradle-plugin'
     }
 }
@@ -38,4 +38,5 @@ dependencies {
     implementation 'org.eclipse.jgit:org.eclipse.jgit.ssh.apache.agent:6.0.0.202111291000-r'
 
     implementation 'com.gradle.plugin-publish:com.gradle.plugin-publish.gradle.plugin:0.18.0'
+    implementation 'com.diffplug.gradle.spotless:com.diffplug.gradle.spotless.gradle.plugin:6.0.5'
 }

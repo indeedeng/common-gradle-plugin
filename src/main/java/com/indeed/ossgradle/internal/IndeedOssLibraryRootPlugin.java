@@ -31,7 +31,8 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
     private static final DateTimeFormatter localVersionFormatter =
             DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC);
     private static final String TAG_PREFIX = "published/";
-    private static final Comparator<Version> VERSION_COMPARATOR = new DefaultVersionComparator().asVersionComparator();
+    private static final Comparator<Version> VERSION_COMPARATOR =
+            new DefaultVersionComparator().asVersionComparator();
     private static final VersionParser VERSION_PARSER = new VersionParser();
 
     private Supplier<String> versionSupplier;
@@ -48,49 +49,67 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
         ciWorkspaceSupplier = Suppliers.memoize(() -> getCiWorkspace(rootProject));
         isLocalPublishSupplier = Suppliers.memoize(() -> ciWorkspaceSupplier.get() == null);
 
-        versionSupplier = Suppliers.memoize(() -> {
-            final boolean local = getIsLocalPublish();
-            final boolean isRc = !local && !StringUtils.equals(GitUtil.getDefaultBranch(rootProject), GitUtil.getCurrentBranch(rootProject));
-            rootProject.getLogger().lifecycle("Calculating next version ...");
-            if (!local && !isRc) {
-                rootProject.getLogger().warn("Detected default branch on CI - we're in full publish go mode");
-            }
-            final String version = calculateVersion(rootProject, local, isRc);
-            rootProject.getLogger().lifecycle(version);
-            return version;
-        });
+        versionSupplier =
+                Suppliers.memoize(
+                        () -> {
+                            final boolean local = getIsLocalPublish();
+                            final boolean isRc =
+                                    !local
+                                            && !StringUtils.equals(
+                                                    GitUtil.getDefaultBranch(rootProject),
+                                                    GitUtil.getCurrentBranch(rootProject));
+                            rootProject.getLogger().lifecycle("Calculating next version ...");
+                            if (!local && !isRc) {
+                                rootProject
+                                        .getLogger()
+                                        .warn(
+                                                "Detected default branch on CI - we're in full publish go mode");
+                            }
+                            final String version = calculateVersion(rootProject, local, isRc);
+                            rootProject.getLogger().lifecycle(version);
+                            return version;
+                        });
         httpUrlSupplier = Suppliers.memoize(() -> GitUtil.getHttpUrl(rootProject));
-        pushTagTaskSupplier = Suppliers.memoize(() -> {
-            if (getIsLocalPublish()) {
-                return null;
-            }
-            return rootProject.getTasks().register("pushPublishTag", task -> {
-                task.doFirst(t -> {
-                    final boolean local = getIsLocalPublish();
-                    if (local) {
-                        return;
-                    }
-                    final String version = versionSupplier.get();
-                    GitUtil.commitGitTag(rootProject, TAG_PREFIX + version, "Publishing "
-                            + version);
-                });
-            });
-        });
+        pushTagTaskSupplier =
+                Suppliers.memoize(
+                        () -> {
+                            if (getIsLocalPublish()) {
+                                return null;
+                            }
+                            return rootProject
+                                    .getTasks()
+                                    .register(
+                                            "pushPublishTag",
+                                            task -> {
+                                                task.doFirst(
+                                                        t -> {
+                                                            final boolean local =
+                                                                    getIsLocalPublish();
+                                                            if (local) {
+                                                                return;
+                                                            }
+                                                            final String version =
+                                                                    versionSupplier.get();
+                                                            GitUtil.commitGitTag(
+                                                                    rootProject,
+                                                                    TAG_PREFIX + version,
+                                                                    "Publishing " + version);
+                                                        });
+                                            });
+                        });
     }
 
-    private String calculateVersion(final Project project, final boolean local, final boolean isRc) {
+    private String calculateVersion(
+            final Project project, final boolean local, final boolean isRc) {
         if (local) {
-            return PUBLOCAL_VERSION_PREFIX
-                    + localVersionFormatter.format(Instant.now());
+            return PUBLOCAL_VERSION_PREFIX + localVersionFormatter.format(Instant.now());
         }
 
         final Set<String> tags = new HashSet<>(GitUtil.getTags(project));
 
         final String latestVersion =
                 tags.stream()
-                        .filter(
-                                (tag) ->
-                                        tag.matches(Pattern.quote(TAG_PREFIX) + "(.*\\.[0-9]+)?"))
+                        .filter((tag) -> tag.matches(Pattern.quote(TAG_PREFIX) + "(.*\\.[0-9]+)?"))
                         .filter((tag) -> !tag.contains("-rc"))
                         .map((tag) -> tag.substring(TAG_PREFIX.length()))
                         .max(IndeedOssLibraryRootPlugin::compareVersion)
@@ -121,14 +140,11 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
     }
 
     private static int compareVersion(final String a, final String b) {
-        return VERSION_COMPARATOR.compare(
-                VERSION_PARSER.transform(a),
-                VERSION_PARSER.transform(b)
-        );
+        return VERSION_COMPARATOR.compare(VERSION_PARSER.transform(a), VERSION_PARSER.transform(b));
     }
 
     @Nullable
-    private static Path getCiWorkspace(final Project project) {
+    public static Path getCiWorkspace(final Project project) {
         String workspaceDir = System.getenv("WORKSPACE");
         if (workspaceDir == null) {
             workspaceDir = System.getenv("CI_PROJECT_DIR");

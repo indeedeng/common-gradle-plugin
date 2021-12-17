@@ -19,31 +19,32 @@ import org.gradle.external.javadoc.CoreJavadocOptions;
 import java.nio.file.Path;
 import java.util.function.Supplier;
 
-/**
- * Applied if the current project is a publishable library
- */
+/** Applied if the current project is a publishable library */
 public class IndeedOssLibraryPlugin implements Plugin<Project> {
     @Override
     public void apply(final Project project) {
         final IndeedOssLibraryExtension ext =
-                project.getExtensions().create("indeedLibrary", IndeedOssLibraryExtension.class, project);
+                project.getExtensions()
+                        .create("indeedLibrary", IndeedOssLibraryExtension.class, project);
         project.getPlugins().apply(JavaLibraryPlugin.class);
-        IndeedOssUtil.afterEvaluate(project, () -> {
-            configurePublishing(project, ext);
-        });
+        IndeedOssUtil.afterEvaluate(
+                project,
+                () -> {
+                    configurePublishing(project, ext);
+                });
     }
 
-    private void configurePublishing(
-            final Project project,
-            final IndeedOssLibraryExtension ext
-    ) {
-        final IndeedOssLibraryRootPlugin rootPlugin = project.getRootProject().getPlugins().apply(IndeedOssLibraryRootPlugin.class);
+    private void configurePublishing(final Project project, final IndeedOssLibraryExtension ext) {
+        final IndeedOssLibraryRootPlugin rootPlugin =
+                project.getRootProject().getPlugins().apply(IndeedOssLibraryRootPlugin.class);
         final boolean local = rootPlugin.getIsLocalPublish();
         final Supplier<String> httpUrlSupplier = () -> rootPlugin.getHttpUrl();
         final TaskProvider<Task> pushTagTask = rootPlugin.getPushTagTask();
         final Path ciWorkspace = rootPlugin.getCiWorkspace();
-        final boolean isGradlePlugin = project.getPlugins().hasPlugin(IndeedOssGradlePluginPlugin.class);
-        final JavaPluginExtension javaExt = project.getExtensions().getByType(JavaPluginExtension.class);
+        final boolean isGradlePlugin =
+                project.getPlugins().hasPlugin(IndeedOssGradlePluginPlugin.class);
+        final JavaPluginExtension javaExt =
+                project.getExtensions().getByType(JavaPluginExtension.class);
 
         if (isGradlePlugin) {
             javaExt.withSourcesJar();
@@ -62,52 +63,70 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
         final String publishName = ext.getName().get();
 
         if (isGradlePlugin) {
-            project.getExtensions().getByType(PluginBundleExtension.class).getPlugins().configureEach(plugin -> {
-                plugin.setVersion(publishVersion);
-            });
+            project.getExtensions()
+                    .getByType(PluginBundleExtension.class)
+                    .getPlugins()
+                    .configureEach(
+                            plugin -> {
+                                plugin.setVersion(publishVersion);
+                            });
         }
 
         final String publicationName;
         if (isGradlePlugin) {
             publicationName = "pluginMaven";
-            publishingExt.getPublications().withType(MavenPublication.class).configureEach(publication -> {
-                if (publication.getName().equals("ossPluginPluginMarkerMaven")) {
-                    publication.setVersion(publishVersion);
-                }
-            });
+            publishingExt
+                    .getPublications()
+                    .withType(MavenPublication.class)
+                    .configureEach(
+                            publication -> {
+                                if (publication.getName().equals("ossPluginPluginMarkerMaven")) {
+                                    publication.setVersion(publishVersion);
+                                }
+                            });
         } else {
             publicationName = "maven";
             publishingExt.getPublications().create(publicationName, MavenPublication.class);
         }
 
-        publishingExt.getPublications().withType(MavenPublication.class).configureEach(publication -> {
-            if (!publication.getName().equals(publicationName)) {
-                return;
-            }
-            publication.setGroupId(publishGroup);
-            publication.setArtifactId(publishName);
-            publication.setVersion(publishVersion);
-            publication.versionMapping(mapping ->
-                    mapping.allVariants(
-                            strategy ->
-                                    strategy.fromResolutionResult())
-            );
-            if (isGradlePlugin) {
-                // Fix for https://github.com/gradle/gradle/issues/19331
-                project.getTasks().named("generateMetadataFileForPluginMavenPublication").configure(task -> {
-                    task.dependsOn("publishPluginJar");
-                    task.dependsOn("publishPluginJavaDocsJar");
-                });
-            }
-            if (!isGradlePlugin) {
-                configurePublicationMetadata(project, publication, httpUrlSupplier, publishName);
-            }
-        });
+        publishingExt
+                .getPublications()
+                .withType(MavenPublication.class)
+                .configureEach(
+                        publication -> {
+                            if (!publication.getName().equals(publicationName)) {
+                                return;
+                            }
+                            publication.setGroupId(publishGroup);
+                            publication.setArtifactId(publishName);
+                            publication.setVersion(publishVersion);
+                            publication.versionMapping(
+                                    mapping ->
+                                            mapping.allVariants(
+                                                    strategy -> strategy.fromResolutionResult()));
+                            if (isGradlePlugin) {
+                                // Fix for https://github.com/gradle/gradle/issues/19331
+                                project.getTasks()
+                                        .named("generateMetadataFileForPluginMavenPublication")
+                                        .configure(
+                                                task -> {
+                                                    task.dependsOn("publishPluginJar");
+                                                    task.dependsOn("publishPluginJavaDocsJar");
+                                                });
+                            }
+                            if (!isGradlePlugin) {
+                                configurePublicationMetadata(
+                                        project, publication, httpUrlSupplier, publishName);
+                            }
+                        });
 
         if (isGradlePlugin && !local) {
-            project.getTasks().named("publish").configure(task -> {
-                task.dependsOn("publishPlugins");
-            });
+            project.getTasks()
+                    .named("publish")
+                    .configure(
+                            task -> {
+                                task.dependsOn("publishPlugins");
+                            });
         } else {
             publishingExt
                     .getRepositories()
@@ -122,34 +141,50 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
                             });
         }
 
-        project.getTasks().configureEach(task -> {
-            if (task instanceof PublishToMavenRepository || task instanceof PublishToMavenLocal || task.getName().equals("publishPlugins")) {
-                task.doFirst(t -> {
-                    if (!project.getGradle().getTaskGraph().hasTask(project.getTasks().getByName("publish"))) {
-                        throw new IllegalArgumentException("Publishing should only be done by running `gradle publish`");
-                    }
-                });
-                if (pushTagTask != null) {
-                    task.finalizedBy(pushTagTask);
-                    pushTagTask.get().dependsOn(task);
-                }
-            }
-        });
+        project.getTasks()
+                .configureEach(
+                        task -> {
+                            if (task instanceof PublishToMavenRepository
+                                    || task instanceof PublishToMavenLocal
+                                    || task.getName().equals("publishPlugins")) {
+                                task.doFirst(
+                                        t -> {
+                                            if (!project.getGradle()
+                                                    .getTaskGraph()
+                                                    .hasTask(
+                                                            project.getTasks()
+                                                                    .getByName("publish"))) {
+                                                throw new IllegalArgumentException(
+                                                        "Publishing should only be done by running `gradle publish`");
+                                            }
+                                        });
+                                if (pushTagTask != null) {
+                                    task.finalizedBy(pushTagTask);
+                                    pushTagTask.get().dependsOn(task);
+                                }
+                            }
+                        });
 
-        project.getTasks().withType(Javadoc.class).configureEach(task -> {
-            task.getOptions().quiet();
-            ((CoreJavadocOptions) (task.getOptions())).addBooleanOption("Xdoclint:none", true);
-        });
+        project.getTasks()
+                .withType(Javadoc.class)
+                .configureEach(
+                        task -> {
+                            task.getOptions().quiet();
+                            ((CoreJavadocOptions) (task.getOptions()))
+                                    .addBooleanOption("Xdoclint:none", true);
+                        });
     }
 
     private static void configurePublicationMetadata(
             final Project project,
             final MavenPublication publication,
             final Supplier<String> httpUrlSupplier,
-            final String publishName
-    ) {
+            final String publishName) {
         final String httpUrl = httpUrlSupplier.get();
-        final String scmUrl = StringUtils.replaceOnce(StringUtils.replace(httpUrl, "https://", "scm:git:git@"), "/", ":") + ".git";
+        final String scmUrl =
+                StringUtils.replaceOnce(
+                                StringUtils.replace(httpUrl, "https://", "scm:git:git@"), "/", ":")
+                        + ".git";
 
         publication.getPom().getName().set(publishName);
         publication.getPom().getDescription().set(publishName);
@@ -163,8 +198,7 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
                                             dev.getId().set("IndeedEng");
                                             dev.getName().set("Indeed Engineering");
                                             dev.getUrl().set("https://github.com/indeedeng");
-                                        })
-                );
+                                        }));
         publication
                 .getPom()
                 .licenses(
@@ -177,17 +211,14 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
                                             lic.getUrl()
                                                     .set(
                                                             "http://www.apache.org/licenses/LICENSE-2.0.txt");
-                                        })
-                );
+                                        }));
         publication
                 .getPom()
                 .scm(
                         (scm) -> {
                             scm.getUrl().set(httpUrl);
-                            scm.getConnection()
-                                    .set(scmUrl);
-                            scm.getDeveloperConnection()
-                                    .set(scmUrl);
+                            scm.getConnection().set(scmUrl);
+                            scm.getDeveloperConnection().set(scmUrl);
                         });
     }
 }
