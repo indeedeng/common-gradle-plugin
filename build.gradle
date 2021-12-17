@@ -1,17 +1,17 @@
-plugins {
-    id 'java-gradle-plugin'
-}
-
-if (!projectDir.toString().contains("buildSrc")) {
+if (projectDir.toString().contains("buildSrc")) {
+    plugins.apply 'java-gradle-plugin'
+} else {
     plugins.apply 'com.indeed.oss'
+    indeedOss.activateFeature 'gradle-plugin'
     pluginBundle {
         website = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
         vcsUrl = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
         tags = ['indeed', 'opensource']
     }
+    indeedPublish {
+        name = 'indeed-oss-gradle-plugin'
+    }
 }
-
-ext['indeed.publish.name'] = 'indeed-oss-gradle-plugin'
 
 gradlePlugin {
     plugins {

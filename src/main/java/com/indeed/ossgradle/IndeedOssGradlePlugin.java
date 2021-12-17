@@ -1,7 +1,7 @@
 package com.indeed.ossgradle;
 
 import com.indeed.ossgradle.internal.ConfigureJavaPlugin;
-import com.indeed.ossgradle.internal.IndeedOssPublishPlugin;
+import com.indeed.ossgradle.internal.IndeedOssExtension;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
@@ -12,10 +12,9 @@ public class IndeedOssGradlePlugin implements Plugin<Project> {
             throw new IllegalStateException("com.indeed.oss can only be applied to the root project");
         }
 
-        project.getPlugins().apply(IndeedOssPublishPlugin.class);
-
         project.allprojects(p -> {
             p.getPlugins().apply(ConfigureJavaPlugin.class);
+            p.getExtensions().create("indeedOss", IndeedOssExtension.class, project);
         });
     }
 }
