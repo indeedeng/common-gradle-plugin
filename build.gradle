@@ -1,0 +1,41 @@
+plugins {
+    id 'java-gradle-plugin'
+}
+
+if (!projectDir.toString().contains("buildSrc")) {
+    plugins.apply 'com.indeed.oss'
+    pluginBundle {
+        website = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
+        vcsUrl = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
+        tags = ['indeed', 'opensource']
+    }
+}
+
+ext['indeed.publish.name'] = 'indeed-oss-gradle-plugin'
+
+gradlePlugin {
+    plugins {
+        ossPlugin {
+            id = 'com.indeed.oss'
+            displayName = 'Indeed OSS Plugin'
+            description = 'Helper plugin for all open-source projects produced by Indeed'
+            implementationClass = 'com.indeed.ossgradle.IndeedOssGradlePlugin'
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+    gradlePluginPortal()
+}
+
+dependencies {
+    implementation 'com.google.guava:guava:31.0.1-jre'
+    implementation 'org.apache.commons:commons-lang3:3.12.0'
+
+    implementation 'org.eclipse.jgit:org.eclipse.jgit:6.0.0.202111291000-r'
+    implementation 'org.eclipse.jgit:org.eclipse.jgit.ssh.apache:6.0.0.202111291000-r'
+    implementation 'org.eclipse.jgit:org.eclipse.jgit.ssh.apache.agent:6.0.0.202111291000-r'
+
+    implementation 'com.gradle.plugin-publish:com.gradle.plugin-publish.gradle.plugin:0.18.0'
+}
