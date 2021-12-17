@@ -4,11 +4,11 @@ import org.gradle.api.Project;
 import org.gradle.api.plugins.ExtraPropertiesExtension;
 import org.gradle.api.provider.Property;
 
-public class IndeedOssPublishExtension {
+public class IndeedOssLibraryExtension {
     private final Property<String> group;
     private final Property<String> name;
 
-    public IndeedOssPublishExtension(final Project project) {
+    public IndeedOssLibraryExtension(final Project project) {
         group = project.getObjects().property(String.class);
         group.finalizeValueOnRead();
         group.set("com.indeed");

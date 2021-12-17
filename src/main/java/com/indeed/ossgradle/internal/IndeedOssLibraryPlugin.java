@@ -5,6 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Task;
+import org.gradle.api.plugins.JavaLibraryPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.publish.PublishingExtension;
 import org.gradle.api.publish.maven.MavenPublication;
@@ -24,8 +25,9 @@ import java.util.function.Supplier;
 public class IndeedOssLibraryPlugin implements Plugin<Project> {
     @Override
     public void apply(final Project project) {
-        final IndeedOssPublishExtension ext =
-                project.getExtensions().create("indeedPublish", IndeedOssPublishExtension.class, project);
+        final IndeedOssLibraryExtension ext =
+                project.getExtensions().create("indeedLibrary", IndeedOssLibraryExtension.class, project);
+        project.getPlugins().apply(JavaLibraryPlugin.class);
         IndeedOssUtil.afterEvaluate(project, () -> {
             configurePublishing(project, ext);
         });
@@ -33,9 +35,9 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
 
     private void configurePublishing(
             final Project project,
-            final IndeedOssPublishExtension ext
+            final IndeedOssLibraryExtension ext
     ) {
-        final IndeedOssLibraryRootPlugin rootPlugin = project.getPlugins().apply(IndeedOssLibraryRootPlugin.class);
+        final IndeedOssLibraryRootPlugin rootPlugin = project.getRootProject().getPlugins().apply(IndeedOssLibraryRootPlugin.class);
         final boolean local = rootPlugin.getIsLocalPublish();
         final Supplier<String> httpUrlSupplier = () -> rootPlugin.getHttpUrl();
         final TaskProvider<Task> pushTagTask = rootPlugin.getPushTagTask();
@@ -123,7 +125,7 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
         project.getTasks().configureEach(task -> {
             if (task instanceof PublishToMavenRepository || task instanceof PublishToMavenLocal || task.getName().equals("publishPlugins")) {
                 task.doFirst(t -> {
-                    if (!project.getGradle().getTaskGraph().hasTask(project.getRootProject().getTasks().getByName("publish"))) {
+                    if (!project.getGradle().getTaskGraph().hasTask(project.getTasks().getByName("publish"))) {
                         throw new IllegalArgumentException("Publishing should only be done by running `gradle publish`");
                     }
                 });

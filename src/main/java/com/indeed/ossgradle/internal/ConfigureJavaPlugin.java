@@ -10,6 +10,7 @@ public class ConfigureJavaPlugin implements Plugin<Project> {
         project.getTasks().withType(JavaCompile.class).configureEach(task -> {
             task.setSourceCompatibility("1.8");
             task.setTargetCompatibility("1.8");
+            task.getOptions().setEncoding("UTF-8");
         });
     }
 }
