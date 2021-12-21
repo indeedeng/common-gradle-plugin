@@ -27,7 +27,7 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
-    public static final String PUBLOCAL_VERSION_PREFIX = "0.local.";
+    private static final String PUBLOCAL_VERSION_PREFIX = "0.local.";
     private static final DateTimeFormatter localVersionFormatter =
             DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC);
     private static final String TAG_PREFIX = "published/";
@@ -53,19 +53,24 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
                 Suppliers.memoize(
                         () -> {
                             final boolean local = getIsLocalPublish();
-                            final boolean isRc =
-                                    !local
-                                            && !StringUtils.equals(
-                                                    GitUtil.getDefaultBranch(rootProject),
-                                                    GitUtil.getCurrentBranch(rootProject));
-                            rootProject.getLogger().lifecycle("Calculating next version ...");
-                            if (!local && !isRc) {
-                                rootProject
-                                        .getLogger()
-                                        .warn(
-                                                "Detected default branch on CI - we're in full publish go mode");
+                            final String defaultBranch = GitUtil.getDefaultBranch(rootProject);
+                            final String currentBranch = GitUtil.getCurrentBranch(rootProject);
+                            final String rcSuffix;
+                            if (!local
+                                    && !StringUtils.equals(
+                                    defaultBranch,
+                                    currentBranch)) {
+                                final String shortHash = GitUtil.getShortHash(rootProject);
+                                String shortBranch = currentBranch;
+                                shortBranch = StringUtils.replace(shortBranch, "jira/", "");
+                                shortBranch = StringUtils.replace(shortBranch, "/", "-");
+                                shortBranch = StringUtils.replace(shortBranch, ".", "-");
+                                rcSuffix = "-dev-" + shortBranch + "-" + shortHash;
+                            } else {
+                                rcSuffix = "";
                             }
-                            final String version = calculateVersion(rootProject, local, isRc);
+                            rootProject.getLogger().lifecycle("Calculating next version ...");
+                            final String version = calculateVersion(rootProject, local, rcSuffix);
                             rootProject.getLogger().lifecycle(version);
                             return version;
                         });
@@ -100,7 +105,7 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
     }
 
     private String calculateVersion(
-            final Project project, final boolean local, final boolean isRc) {
+            final Project project, final boolean local, final String rcSuffix) {
         if (local) {
             return PUBLOCAL_VERSION_PREFIX + localVersionFormatter.format(Instant.now());
         }
@@ -126,14 +131,22 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
             newVersion = Joiner.on('.').join(split);
         }
 
-        if (isRc) {
+        if (!StringUtils.isEmpty(rcSuffix)) {
             for (int i = 1; ; i++) {
-                final String test = newVersion + "-rc" + i;
+                String test = newVersion + rcSuffix;
+                if (i != 1) {
+                    test += "-" + i;
+                }
                 if (!tags.contains(TAG_PREFIX + test)) {
                     newVersion = test;
                     break;
                 }
             }
+        } else {
+            project
+                    .getLogger()
+                    .warn(
+                            "Detected default branch on CI - we're in full publish go mode");
         }
 
         return newVersion;

@@ -7,6 +7,7 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.SshTransport;
 import org.eclipse.jgit.transport.TransportHttp;
@@ -18,11 +19,26 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class GitUtil {
+
+    public static String getShortHash(final Project project) {
+        final AtomicReference<String> hash = new AtomicReference<>("");
+        withGit(project, git -> {
+            final Iterator<RevCommit> revCommits = git.log().setMaxCount(1).call().iterator();
+            if (revCommits.hasNext()) {
+                final RevCommit revCommit = revCommits.next();
+                hash.set(revCommit.abbreviate(7).name());
+                return;
+            }
+            throw new GitRepositoryException("Unable to fetch latest commit from git log");
+        });
+        return hash.get();
+    }
 
     public static String getHttpUrl(final Project project) {
         String repoUrl = getOriginUrl(project);
