@@ -7,6 +7,7 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.errors.RepositoryNotFoundException;
 import org.eclipse.jgit.lib.Constants;
 import org.eclipse.jgit.lib.Ref;
+import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
 import org.eclipse.jgit.transport.SshTransport;
@@ -28,15 +29,18 @@ public class GitUtil {
 
     public static String getShortHash(final Project project) {
         final AtomicReference<String> hash = new AtomicReference<>("");
-        withGit(project, git -> {
-            final Iterator<RevCommit> revCommits = git.log().setMaxCount(1).call().iterator();
-            if (revCommits.hasNext()) {
-                final RevCommit revCommit = revCommits.next();
-                hash.set(revCommit.abbreviate(7).name());
-                return;
-            }
-            throw new GitRepositoryException("Unable to fetch latest commit from git log");
-        });
+        withGit(
+                project,
+                git -> {
+                    final Iterator<RevCommit> revCommits =
+                            git.log().setMaxCount(1).call().iterator();
+                    if (revCommits.hasNext()) {
+                        final RevCommit revCommit = revCommits.next();
+                        hash.set(revCommit.abbreviate(7).name());
+                        return;
+                    }
+                    throw new GitRepositoryException("Unable to fetch latest commit from git log");
+                });
         return hash.get();
     }
 
@@ -195,13 +199,10 @@ public class GitUtil {
         withGit(
                 project,
                 git -> {
-                    final Ref originHead =
-                            git.getRepository()
-                                    .getRefDatabase()
-                                    .findRef(Constants.R_REMOTES + "origin/" + Constants.HEAD);
+                    final Ref originHead = configureSsh(git.lsRemote()).callAsMap().get(Constants.HEAD);
                     if (originHead != null) {
                         final String longName = originHead.getTarget().getName();
-                        defaultBranch[0] = git.getRepository().shortenRemoteBranchName(longName);
+                        defaultBranch[0] = Repository.shortenRefName(longName);
                     }
                 });
         return defaultBranch[0];

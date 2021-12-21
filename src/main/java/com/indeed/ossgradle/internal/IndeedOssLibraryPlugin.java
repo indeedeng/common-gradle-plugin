@@ -158,10 +158,8 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
                                                         "Publishing should only be done by running `gradle publish`");
                                             }
                                         });
-                                if (pushTagTask != null) {
-                                    task.finalizedBy(pushTagTask);
-                                    pushTagTask.get().dependsOn(task);
-                                }
+                                task.finalizedBy(pushTagTask);
+                                pushTagTask.get().dependsOn(task);
                             }
                         });
 

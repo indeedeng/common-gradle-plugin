@@ -1,7 +1,7 @@
 on: push
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -13,5 +13,8 @@ jobs:
           java-version: '11'
           distribution: 'zulu'
       - uses: gradle/gradle-build-action@v2.0.1
+        env:
+          GRADLE_PUBLISH_KEY: ${{ secrets.GRADLE_PUBLISH_KEY }}
+          GRADLE_PUBLISH_SECRET: ${{ secrets.GRADLE_PUBLISH_SECRET }}
         with:
-          arguments: check publish -Pgradle.publish.key=${{ secrets.GRADLE_PUBLISH_KEY }} -Pgradle.publish.secret=${{ secrets.GRADLE_PUBLISH_SECRET }}
+          arguments: check publish
