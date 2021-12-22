@@ -1,16 +1,14 @@
-if (projectDir.toString().contains("buildSrc")) {
-    plugins.apply 'java-gradle-plugin'
-} else {
-    plugins.apply 'com.indeed.oss'
-    indeedOss.activateFeature 'gradle-plugin'
-    pluginBundle {
-        website = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
-        vcsUrl = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
-        tags = ['indeed', 'opensource']
-    }
-    indeedLibrary {
-        name = 'indeed-oss-gradle-plugin'
-    }
+plugins {
+    id 'com.indeed.oss' version '1+'
+}
+
+indeedOss.activateFeature 'gradle-plugin'
+indeedLibrary.name = 'indeed-oss-gradle-plugin'
+
+pluginBundle {
+    website = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
+    vcsUrl = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
+    tags = ['indeed', 'opensource']
 }
 
 gradlePlugin {
