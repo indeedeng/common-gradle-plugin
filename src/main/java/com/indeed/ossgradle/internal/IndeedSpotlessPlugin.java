@@ -12,7 +12,7 @@ public class IndeedSpotlessPlugin implements Plugin<Project> {
     public void apply(final Project project) {
         project.getPlugins().withType(JavaPlugin.class, p -> applySpotless(project));
     }
-    
+
     public void applySpotless(final Project project) {
         project.getPlugins().apply(SpotlessPlugin.class);
         final SpotlessExtension ext = project.getExtensions().getByType(SpotlessExtension.class);

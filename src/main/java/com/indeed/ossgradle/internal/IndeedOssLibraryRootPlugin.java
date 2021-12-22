@@ -115,7 +115,7 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
         final String latestVersion =
                 tags.stream()
                         .filter((tag) -> tag.matches(Pattern.quote(TAG_PREFIX) + "(.*\\.[0-9]+)?"))
-                        .filter((tag) -> !tag.contains("-rc"))
+                        .filter((tag) -> !tag.contains("-dev"))
                         .map((tag) -> tag.substring(TAG_PREFIX.length()))
                         .max(IndeedOssLibraryRootPlugin::compareVersion)
                         .orElse(null);
