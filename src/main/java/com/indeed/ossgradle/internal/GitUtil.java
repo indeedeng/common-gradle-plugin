@@ -199,7 +199,8 @@ public class GitUtil {
         withGit(
                 project,
                 git -> {
-                    final Ref originHead = configureSsh(git.lsRemote()).callAsMap().get(Constants.HEAD);
+                    final Ref originHead =
+                            configureSsh(git.lsRemote()).callAsMap().get(Constants.HEAD);
                     if (originHead != null) {
                         final String longName = originHead.getTarget().getName();
                         defaultBranch[0] = Repository.shortenRefName(longName);

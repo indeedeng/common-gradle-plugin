@@ -46,9 +46,8 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
         final JavaPluginExtension javaExt =
                 project.getExtensions().getByType(JavaPluginExtension.class);
 
-        if (isGradlePlugin) {
+        if (!local) {
             javaExt.withSourcesJar();
-        } else if (!local) {
             javaExt.withJavadocJar();
         }
 
@@ -117,6 +116,7 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
                             if (!isGradlePlugin) {
                                 configurePublicationMetadata(
                                         project, publication, httpUrlSupplier, publishName);
+                                publication.from(project.getComponents().getByName("java"));
                             }
                         });
 
