@@ -163,19 +163,6 @@ public class GitUtil {
         return tags;
     }
 
-    public static void commitGitTag(
-            final Project project, final String tagName, final String commitMessage) {
-        // Make sure we only have the tags from the remote
-        withGit(
-                project,
-                git -> {
-                    // Commit and push new tag
-                    git.tagDelete().setTags(tagName).call();
-                    git.tag().setName(tagName).setMessage(commitMessage).call();
-                    configureSsh(git.push()).add(tagName).call();
-                });
-    }
-
     public static String getCurrentBranch(final Project project) {
         final String[] currentBranch = new String[1];
 

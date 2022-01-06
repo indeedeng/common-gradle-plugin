@@ -4,7 +4,6 @@ import com.gradle.publish.PluginBundleExtension;
 import org.apache.commons.lang3.StringUtils;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
 import org.gradle.api.plugins.JavaLibraryPlugin;
 import org.gradle.api.plugins.JavaPluginExtension;
 import org.gradle.api.publish.PublishingExtension;
@@ -12,7 +11,6 @@ import org.gradle.api.publish.maven.MavenPublication;
 import org.gradle.api.publish.maven.plugins.MavenPublishPlugin;
 import org.gradle.api.publish.maven.tasks.PublishToMavenLocal;
 import org.gradle.api.publish.maven.tasks.PublishToMavenRepository;
-import org.gradle.api.tasks.TaskProvider;
 import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.external.javadoc.CoreJavadocOptions;
 
@@ -39,7 +37,6 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
                 project.getRootProject().getPlugins().apply(IndeedOssLibraryRootPlugin.class);
         final boolean local = rootPlugin.getIsLocalPublish();
         final Supplier<String> httpUrlSupplier = () -> rootPlugin.getHttpUrl();
-        final TaskProvider<Task> pushTagTask = rootPlugin.getPushTagTask();
         final Path ciWorkspace = rootPlugin.getCiWorkspace();
         final boolean isGradlePlugin =
                 project.getPlugins().hasPlugin(IndeedOssGradlePluginPlugin.class);
@@ -158,8 +155,6 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
                                                         "Publishing should only be done by running `gradle publish`");
                                             }
                                         });
-                                task.finalizedBy(pushTagTask);
-                                pushTagTask.get().dependsOn(task);
                             }
                         });
 

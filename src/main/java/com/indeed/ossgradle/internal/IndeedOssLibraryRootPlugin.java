@@ -6,11 +6,9 @@ import com.google.common.base.Suppliers;
 import org.apache.commons.lang3.StringUtils;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
-import org.gradle.api.Task;
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.DefaultVersionComparator;
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.Version;
 import org.gradle.api.internal.artifacts.ivyservice.ivyresolve.strategy.VersionParser;
-import org.gradle.api.tasks.TaskProvider;
 
 import javax.annotation.Nullable;
 import java.nio.file.Path;
@@ -24,7 +22,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 
 public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
     private static final String PUBLOCAL_VERSION_PREFIX = "0.local.";
@@ -35,12 +32,10 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
             new DefaultVersionComparator().asVersionComparator();
     private static final VersionParser VERSION_PARSER = new VersionParser();
 
-    private Supplier<String> rcSuffixSupplier;
     private Supplier<String> versionSupplier;
     private Supplier<Boolean> isLocalPublishSupplier;
     private Supplier<Path> ciWorkspaceSupplier;
     private Supplier<String> httpUrlSupplier;
-    private TaskProvider<Task> pushTagTask;
 
     public void apply(final Project rootProject) {
         if (rootProject != rootProject.getRootProject()) {
@@ -49,7 +44,6 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
 
         ciWorkspaceSupplier = Suppliers.memoize(() -> getCiWorkspace(rootProject));
         isLocalPublishSupplier = Suppliers.memoize(() -> ciWorkspaceSupplier.get() == null);
-        rcSuffixSupplier = Suppliers.memoize(() -> calculateRcSuffix(rootProject));
         versionSupplier =
                 Suppliers.memoize(
                         () -> {
@@ -60,49 +54,6 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
                             return version;
                         });
         httpUrlSupplier = Suppliers.memoize(() -> GitUtil.getHttpUrl(rootProject));
-        pushTagTask =
-                rootProject
-                        .getTasks()
-                        .register(
-                                "pushPublishTag",
-                                task -> {
-                                    task.doFirst(
-                                            t -> {
-                                                pushPublishTag(rootProject);
-                                            });
-                                });
-    }
-
-    private void pushPublishTag(final Project project) {
-        final boolean local = getIsLocalPublish();
-        if (local) {
-            return;
-        }
-        final String rcSuffix = getRcSuffix();
-        if (!StringUtils.isEmpty(rcSuffix)) {
-            return;
-        }
-        final String version = versionSupplier.get();
-        GitUtil.commitGitTag(project, TAG_PREFIX + version, "Publishing " + version);
-    }
-
-    private String calculateRcSuffix(final Project project) {
-        final String defaultBranch = GitUtil.getDefaultBranch(project);
-        final String currentBranch = GitUtil.getCurrentBranch(project);
-        project.getLogger().lifecycle("Default branch: " + defaultBranch);
-        project.getLogger().lifecycle("Current branch: " + currentBranch);
-        final String rcSuffix;
-        if (!StringUtils.equals(defaultBranch, currentBranch)) {
-            final String shortHash = GitUtil.getShortHash(project);
-            String shortBranch = currentBranch;
-            shortBranch = StringUtils.replace(shortBranch, "jira/", "");
-            shortBranch = StringUtils.replace(shortBranch, "/", "-");
-            shortBranch = StringUtils.replace(shortBranch, ".", "-");
-            rcSuffix = "-dev-" + shortBranch + "-" + shortHash;
-        } else {
-            rcSuffix = "";
-        }
-        return rcSuffix;
     }
 
     private String calculateVersion(final Project project, final boolean local) {
@@ -114,14 +65,32 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
 
         final String latestVersion =
                 tags.stream()
-                        .filter((tag) -> tag.matches(Pattern.quote(TAG_PREFIX) + "(.*\\.[0-9]+)?"))
-                        .filter((tag) -> !tag.contains("-dev"))
-                        .map((tag) -> tag.substring(TAG_PREFIX.length()))
+                        .filter(tag -> tag.startsWith(TAG_PREFIX))
+                        .map(tag -> tag.substring(TAG_PREFIX.length()))
+                        .filter(v -> !v.contains("-dev"))
+                        .map(v -> StringUtils.substringBefore(v, "-"))
                         .max(IndeedOssLibraryRootPlugin::compareVersion)
                         .orElse(null);
         project.getLogger().lifecycle("Latest existing version: " + latestVersion);
 
-        final String rcSuffix = getRcSuffix();
+        final String defaultBranch = GitUtil.getDefaultBranch(project);
+        final String currentBranch = GitUtil.getCurrentBranch(project);
+        project.getLogger().lifecycle("Default branch: " + defaultBranch);
+        project.getLogger().lifecycle("Current branch: " + currentBranch);
+        final String suffix;
+        final boolean isDev;
+        final String shortHash = GitUtil.getShortHash(project);
+        if (!StringUtils.equals(defaultBranch, currentBranch)) {
+            String shortBranch = currentBranch;
+            shortBranch = StringUtils.replace(shortBranch, "jira/", "");
+            shortBranch = StringUtils.replace(shortBranch, "/", "-");
+            shortBranch = StringUtils.replace(shortBranch, ".", "-");
+            suffix = "-dev-" + shortBranch + "-" + shortHash;
+            isDev = true;
+        } else {
+            suffix = "-" + shortHash;
+            isDev = false;
+        }
 
         String newVersion;
         if (latestVersion == null) {
@@ -129,16 +98,16 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
         } else {
             final List<String> split = new ArrayList<>(Splitter.on('.').splitToList(latestVersion));
             int patchVersion = Integer.parseInt(split.get(split.size() - 1));
-            if (StringUtils.isEmpty(rcSuffix)) {
+            if (!isDev) {
                 patchVersion++;
             }
             split.set(split.size() - 1, String.valueOf(patchVersion));
             newVersion = Joiner.on('.').join(split);
         }
 
-        if (!StringUtils.isEmpty(rcSuffix)) {
+        if (!StringUtils.isEmpty(suffix)) {
             for (int i = 1; ; i++) {
-                String test = newVersion + rcSuffix;
+                String test = newVersion + suffix;
                 if (i != 1) {
                     test += "-" + i;
                 }
@@ -171,10 +140,6 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
         return Paths.get(workspaceDir);
     }
 
-    public String getRcSuffix() {
-        return rcSuffixSupplier.get();
-    }
-
     public String getVersion() {
         return versionSupplier.get();
     }
@@ -190,10 +155,5 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
 
     public String getHttpUrl() {
         return httpUrlSupplier.get();
-    }
-
-    @Nullable
-    public TaskProvider<Task> getPushTagTask() {
-        return pushTagTask;
     }
 }
