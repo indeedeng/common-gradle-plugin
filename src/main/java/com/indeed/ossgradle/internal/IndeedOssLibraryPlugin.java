@@ -1,5 +1,6 @@
 package com.indeed.ossgradle.internal;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -12,6 +13,9 @@ import org.gradle.api.publish.maven.tasks.PublishToMavenLocal;
 import org.gradle.api.publish.maven.tasks.PublishToMavenRepository;
 import org.gradle.api.tasks.javadoc.Javadoc;
 import org.gradle.external.javadoc.CoreJavadocOptions;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 
 import java.nio.file.Path;
 import java.util.function.Supplier;
@@ -28,10 +32,38 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
         project.afterEvaluate(p -> afterEvaluate());
     }
 
-    public void onVersionReady() {
-        final IndeedOssLibraryRootPlugin rootPlugin =
-                project.getRootProject().getPlugins().apply(IndeedOssLibraryRootPlugin.class);
-        project.setVersion(rootPlugin.getVersion());
+    public void onVersionReady(final String version) {
+        project.setVersion(version);
+
+        final PublishingExtension publishingExt =
+                project.getExtensions().getByType(PublishingExtension.class);
+        publishingExt
+                .getPublications()
+                .withType(MavenPublication.class)
+                .configureEach(
+                        pub -> {
+                            if (pub.getName().endsWith("PluginMarkerMaven")) {
+                                pub.getPom()
+                                        .withXml(
+                                                xmlProvider -> {
+                                                    Element root = xmlProvider.asElement();
+                                                    Document document = root.getOwnerDocument();
+                                                    Node dependencies =
+                                                            root.getElementsByTagName(
+                                                                            "dependencies")
+                                                                    .item(0);
+                                                    Node dependency =
+                                                            dependencies.getChildNodes().item(0);
+                                                    Node versionNode =
+                                                            dependency.getChildNodes().item(2);
+                                                    Preconditions.checkArgument(
+                                                            versionNode
+                                                                    .getNodeName()
+                                                                    .equals("version"));
+                                                    versionNode.setTextContent(version);
+                                                });
+                            }
+                        });
     }
 
     private void afterEvaluate() {
