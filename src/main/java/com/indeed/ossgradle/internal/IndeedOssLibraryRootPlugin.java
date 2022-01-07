@@ -28,6 +28,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -146,6 +147,7 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
         gradlePluginPortal.content(c -> c.onlyForConfigurations(testConfName));
         project.getRepositories().add(gradlePluginPortal);
 
+        testConf.getResolutionStrategy().cacheDynamicVersionsFor(1, TimeUnit.MINUTES);
         testConf.setTransitive(false);
         for (final ModuleIdentifier id : ids) {
             testConf.getDependencies()

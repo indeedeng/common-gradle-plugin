@@ -8,6 +8,8 @@ import com.indeed.ossgradle.internal.IndeedSpotlessPlugin;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 
+import java.util.concurrent.TimeUnit;
+
 public class IndeedOssGradlePlugin implements Plugin<Project> {
     @Override
     public void apply(final Project project) {
@@ -20,6 +22,9 @@ public class IndeedOssGradlePlugin implements Plugin<Project> {
 
         project.allprojects(
                 p -> {
+                    p.getConfigurations().configureEach(conf -> {
+                        conf.getResolutionStrategy().cacheDynamicVersionsFor(1, TimeUnit.MINUTES);
+                    });
                     p.getPlugins().apply(ConfigureJavaPlugin.class);
                     p.getPlugins().apply(ConfigureReposPlugin.class);
                     p.getPlugins().apply(IndeedSpotlessPlugin.class);

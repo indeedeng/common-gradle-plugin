@@ -33,6 +33,6 @@ dependencies {
 
     implementation 'org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r'
 
-    implementation 'com.gradle.plugin-publish:com.gradle.plugin-publish.gradle.plugin:0.18.0'
-    implementation 'com.diffplug.gradle.spotless:com.diffplug.gradle.spotless.gradle.plugin:6.0.5'
+    implementation 'com.gradle.plugin-publish:com.gradle.plugin-publish.gradle.plugin:0.19.0'
+    implementation 'com.diffplug.gradle.spotless:com.diffplug.gradle.spotless.gradle.plugin:6.1.2'
 }
