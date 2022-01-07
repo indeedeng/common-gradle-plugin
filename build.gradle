@@ -1,14 +1,14 @@
-plugins {
-    id 'com.indeed.oss' version '1+'
-}
-
-indeedOss.activateFeature 'gradle-plugin'
-indeedLibrary.name = 'indeed-oss-gradle-plugin'
-
-pluginBundle {
-    website = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
-    vcsUrl = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
-    tags = ['indeed', 'opensource']
+if (gradle.getParent() != null) {
+    plugins.apply 'java-gradle-plugin'
+} else {
+    plugins.apply 'com.indeed.oss'
+    indeedOss.activateFeature 'gradle-plugin'
+    pluginBundle {
+        website = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
+        vcsUrl = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
+        tags = ['indeed', 'opensource']
+    }
+    indeedLibrary.name = 'indeed-oss-gradle-plugin'
 }
 
 gradlePlugin {
@@ -31,9 +31,7 @@ dependencies {
     implementation 'com.google.guava:guava:31.0.1-jre'
     implementation 'org.apache.commons:commons-lang3:3.12.0'
 
-    implementation 'org.eclipse.jgit:org.eclipse.jgit:6.0.0.202111291000-r'
-    implementation 'org.eclipse.jgit:org.eclipse.jgit.ssh.apache:6.0.0.202111291000-r'
-    implementation 'org.eclipse.jgit:org.eclipse.jgit.ssh.apache.agent:6.0.0.202111291000-r'
+    implementation 'org.eclipse.jgit:org.eclipse.jgit:5.13.0.202109080827-r'
 
     implementation 'com.gradle.plugin-publish:com.gradle.plugin-publish.gradle.plugin:0.18.0'
     implementation 'com.diffplug.gradle.spotless:com.diffplug.gradle.spotless.gradle.plugin:6.0.5'

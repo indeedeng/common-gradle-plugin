@@ -1,6 +1,5 @@
 package com.indeed.ossgradle.internal;
 
-import com.gradle.publish.PluginBundleExtension;
 import org.apache.commons.lang3.StringUtils;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
@@ -19,20 +18,25 @@ import java.util.function.Supplier;
 
 /** Applied if the current project is a publishable library */
 public class IndeedOssLibraryPlugin implements Plugin<Project> {
+    private Project project;
+
     @Override
     public void apply(final Project project) {
-        final IndeedOssLibraryExtension ext =
-                project.getExtensions()
-                        .create("indeedLibrary", IndeedOssLibraryExtension.class, project);
+        this.project = project;
+        project.getExtensions().create("indeedLibrary", IndeedOssLibraryExtension.class, project);
         project.getPlugins().apply(JavaLibraryPlugin.class);
-        IndeedOssUtil.afterEvaluate(
-                project,
-                () -> {
-                    configurePublishing(project, ext);
-                });
+        project.afterEvaluate(p -> afterEvaluate());
     }
 
-    private void configurePublishing(final Project project, final IndeedOssLibraryExtension ext) {
+    public void onVersionReady() {
+        final IndeedOssLibraryRootPlugin rootPlugin =
+                project.getRootProject().getPlugins().apply(IndeedOssLibraryRootPlugin.class);
+        project.setVersion(rootPlugin.getVersion());
+    }
+
+    private void afterEvaluate() {
+        final IndeedOssLibraryExtension ext =
+                project.getExtensions().findByType(IndeedOssLibraryExtension.class);
         final IndeedOssLibraryRootPlugin rootPlugin =
                 project.getRootProject().getPlugins().apply(IndeedOssLibraryRootPlugin.class);
         final boolean local = rootPlugin.getIsLocalPublish();
@@ -48,8 +52,6 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
             javaExt.withJavadocJar();
         }
 
-        final String publishVersion = rootPlugin.getVersion();
-
         // Set up publication
         project.getPluginManager().apply(MavenPublishPlugin.class);
         final PublishingExtension publishingExt =
@@ -58,28 +60,9 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
         final String publishGroup = ext.getGroup().get();
         final String publishName = ext.getName().get();
 
-        if (isGradlePlugin) {
-            project.getExtensions()
-                    .getByType(PluginBundleExtension.class)
-                    .getPlugins()
-                    .configureEach(
-                            plugin -> {
-                                plugin.setVersion(publishVersion);
-                            });
-        }
-
         final String publicationName;
         if (isGradlePlugin) {
             publicationName = "pluginMaven";
-            publishingExt
-                    .getPublications()
-                    .withType(MavenPublication.class)
-                    .configureEach(
-                            publication -> {
-                                if (publication.getName().equals("ossPluginPluginMarkerMaven")) {
-                                    publication.setVersion(publishVersion);
-                                }
-                            });
         } else {
             publicationName = "maven";
             publishingExt.getPublications().create(publicationName, MavenPublication.class);
@@ -95,7 +78,6 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
                             }
                             publication.setGroupId(publishGroup);
                             publication.setArtifactId(publishName);
-                            publication.setVersion(publishVersion);
                             publication.versionMapping(
                                     mapping ->
                                             mapping.allVariants(

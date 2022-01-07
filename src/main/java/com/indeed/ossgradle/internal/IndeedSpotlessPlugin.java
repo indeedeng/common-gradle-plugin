@@ -26,7 +26,7 @@ public class IndeedSpotlessPlugin implements Plugin<Project> {
                     java.removeUnusedImports();
                     java.trimTrailingWhitespace();
                     java.endWithNewline();
-                    java.googleJavaFormat("1.13.0").aosp();
+                    java.googleJavaFormat("1.7").aosp();
                     java.importOrder("", "javax", "java", "\\#");
                     java.replaceRegex(
                             "Remove extra line between javax and java",

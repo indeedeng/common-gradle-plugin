@@ -2,28 +2,19 @@ package com.indeed.ossgradle.internal;
 
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.jgit.api.Git;
-import org.eclipse.jgit.api.TransportCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.eclipse.jgit.errors.RepositoryNotFoundException;
-import org.eclipse.jgit.lib.Constants;
-import org.eclipse.jgit.lib.Ref;
-import org.eclipse.jgit.lib.Repository;
 import org.eclipse.jgit.revwalk.RevCommit;
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder;
-import org.eclipse.jgit.transport.SshTransport;
-import org.eclipse.jgit.transport.TransportHttp;
 import org.gradle.api.Project;
+import org.gradle.process.ExecResult;
 
-import javax.annotation.Nullable;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 public class GitUtil {
 
@@ -135,34 +126,6 @@ public class GitUtil {
         }
     }
 
-    private static <T extends TransportCommand> T configureSsh(final T cmd) {
-        cmd.setTransportConfigCallback(
-                transport -> {
-                    if (transport instanceof TransportHttp) {
-                        return;
-                    }
-                    ((SshTransport) transport).setSshSessionFactory(new MySshSessionFactory());
-                });
-
-        return cmd;
-    }
-
-    public static Collection<String> getTags(final Project project) {
-        final List<String> tags = new ArrayList<>();
-        withGit(
-                project,
-                git -> {
-                    final Collection<Ref> remoteTags =
-                            configureSsh(git.lsRemote()).setTags(true).call();
-                    tags.addAll(
-                            remoteTags.stream()
-                                    .map(Ref::getName)
-                                    .map(name -> StringUtils.removeStart(name, "refs/tags/"))
-                                    .collect(Collectors.toList()));
-                });
-        return tags;
-    }
-
     public static String getCurrentBranch(final Project project) {
         final String[] currentBranch = new String[1];
 
@@ -180,19 +143,25 @@ public class GitUtil {
         return currentBranch[0];
     }
 
-    @Nullable
     public static String getDefaultBranch(final Project project) {
-        final String[] defaultBranch = new String[1];
-        withGit(
-                project,
-                git -> {
-                    final Ref originHead =
-                            configureSsh(git.lsRemote()).callAsMap().get(Constants.HEAD);
-                    if (originHead != null) {
-                        final String longName = originHead.getTarget().getName();
-                        defaultBranch[0] = Repository.shortenRefName(longName);
-                    }
-                });
-        return defaultBranch[0];
+        final ByteArrayOutputStream stdout = new ByteArrayOutputStream();
+        final ByteArrayOutputStream stderr = new ByteArrayOutputStream();
+        final ExecResult result =
+                project.exec(
+                        exec -> {
+                            exec.commandLine(
+                                    "/bin/sh",
+                                    "-c",
+                                    "git remote show origin | awk '/HEAD branch/ {print $NF}'");
+                            exec.setStandardOutput(stdout);
+                            exec.setErrorOutput(stderr);
+                        });
+        final String output = StringUtils.trim(stdout.toString());
+        if (result.getExitValue() != 0 || output.isEmpty()) {
+            project.getLogger().lifecycle(stderr.toString());
+            project.getLogger().lifecycle(stderr.toString());
+            throw new IllegalStateException("Failed to get default branch");
+        }
+        return output;
     }
 }
