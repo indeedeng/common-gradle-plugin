@@ -58,7 +58,7 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
                                         project.getPlugins()
                                                 .findPlugin(IndeedOssLibraryPlugin.class);
                                 if (p != null) {
-                                    p.onVersionReady();
+                                    p.onVersionReady(getVersion());
                                 }
                             }
                         });
@@ -69,11 +69,14 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
                 Suppliers.memoize(
                         () -> {
                             final boolean local = getIsLocalPublish();
-                            if (rootProject.getGradle().getStartParameter().getTaskRequests().stream()
+                            if (rootProject.getGradle().getStartParameter().getTaskRequests()
+                                    .stream()
                                     .noneMatch(request -> request.getArgs().contains("publish"))) {
                                 return null;
                             }
-                            rootProject.getLogger().lifecycle("Calculating version to use for publish ...");
+                            rootProject
+                                    .getLogger()
+                                    .lifecycle("Calculating version to use for publish ...");
                             final String version = calculateNextVersion(rootProject, local);
                             rootProject.getLogger().lifecycle("Now using version: " + version);
                             return version;
@@ -81,7 +84,7 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
         httpUrlSupplier = Suppliers.memoize(() -> GitUtil.getHttpUrl(rootProject));
     }
 
-    private String calculateNextVersion(final Project project, final boolean local) {
+    private static String calculateNextVersion(final Project project, final boolean local) {
         if (local) {
             return PUBLOCAL_VERSION_PREFIX + localVersionFormatter.format(Instant.now());
         }
@@ -94,7 +97,8 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
         final boolean isDev;
         final String shortHash = GitUtil.getShortHash(project);
         if (!StringUtils.equals(defaultBranch, currentBranch)) {
-            project.getLogger().lifecycle("We are not on the default branch, so this is a dev publish");
+            project.getLogger()
+                    .lifecycle("We are not on the default branch, so this is a dev publish");
             String shortBranch = currentBranch;
             shortBranch = StringUtils.replace(shortBranch, "jira/", "");
             shortBranch = StringUtils.replace(shortBranch, "/", "-");
@@ -111,7 +115,7 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
         return nextVersion + suffix;
     }
 
-    private String calculateNextVersionFromBuild(final Gradle gradle, final boolean isDev) {
+    private static String calculateNextVersionFromBuild(final Gradle gradle, final boolean isDev) {
         final Collection<ModuleIdentifier> ids =
                 gradle.getRootProject().getAllprojects().stream()
                         .map(
@@ -127,7 +131,7 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
         return calculateNextVersionFromIds(gradle.getRootProject(), ids, isDev);
     }
 
-    private String calculateNextVersionFromIds(
+    public static String calculateNextVersionFromIds(
             final Project project, final Collection<ModuleIdentifier> ids, final boolean isDev) {
         final String testConfName = "versionCalculator";
         final Configuration testConf = project.getConfigurations().create(testConfName);
@@ -137,7 +141,8 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
         final ArtifactRepository mavenCentral = project.getRepositories().mavenCentral();
         mavenCentral.content(c -> c.onlyForConfigurations(testConfName));
         project.getRepositories().add(mavenCentral);
-        final ArtifactRepository gradlePluginPortal = project.getRepositories().gradlePluginPortal();
+        final ArtifactRepository gradlePluginPortal =
+                project.getRepositories().gradlePluginPortal();
         gradlePluginPortal.content(c -> c.onlyForConfigurations(testConfName));
         project.getRepositories().add(gradlePluginPortal);
 
@@ -166,7 +171,7 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
         return calculateNextVersionFromExistingVersions(latestVersions, isDev);
     }
 
-    private String calculateNextVersionFromExistingVersions(
+    private static String calculateNextVersionFromExistingVersions(
             final Collection<String> latestVersions, final boolean isDev) {
         if (latestVersions.isEmpty()) {
             return "1.0.0";

@@ -2,6 +2,7 @@ package com.indeed.ossgradle;
 
 import com.indeed.ossgradle.internal.ConfigureJavaPlugin;
 import com.indeed.ossgradle.internal.ConfigureReposPlugin;
+import com.indeed.ossgradle.internal.FindNextVersionTask;
 import com.indeed.ossgradle.internal.IndeedOssExtension;
 import com.indeed.ossgradle.internal.IndeedSpotlessPlugin;
 import org.gradle.api.Plugin;
@@ -14,6 +15,8 @@ public class IndeedOssGradlePlugin implements Plugin<Project> {
             throw new IllegalStateException(
                     "com.indeed.oss can only be applied to the root project");
         }
+
+        project.getTasks().register("findNextVersion", FindNextVersionTask.class);
 
         project.allprojects(
                 p -> {
