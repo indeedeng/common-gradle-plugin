@@ -12,8 +12,7 @@ public class ConfigureJavaPlugin implements Plugin<Project> {
                 .withType(JavaCompile.class)
                 .configureEach(
                         task -> {
-                            task.setSourceCompatibility("1.8");
-                            task.setTargetCompatibility("1.8");
+                            task.getOptions().getRelease().set(8);
                             task.getOptions().setEncoding("UTF-8");
                         });
         project.getTasks()
