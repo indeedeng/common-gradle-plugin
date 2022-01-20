@@ -1,23 +1,27 @@
-if (gradle.getParent() != null) {
-    plugins.apply 'java-gradle-plugin'
+if ("true".equals(System.getProperty("idea.sync.active"))) {
+    plugins.apply 'java'
 } else {
-    plugins.apply 'com.indeed.oss'
-    indeedOss.activateFeature 'gradle-plugin'
-    pluginBundle {
-        website = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
-        vcsUrl = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
-        tags = ['indeed', 'opensource']
+    if (gradle.getParent() != null) {
+        plugins.apply 'java-gradle-plugin'
+    } else {
+        plugins.apply 'com.indeed.oss'
+        indeedOss.activateFeature 'gradle-plugin'
+        pluginBundle {
+            website = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
+            vcsUrl = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
+            tags = ['indeed', 'opensource']
+        }
+        indeedLibrary.name = 'indeed-oss-gradle-plugin'
     }
-    indeedLibrary.name = 'indeed-oss-gradle-plugin'
-}
 
-gradlePlugin {
-    plugins {
-        ossPlugin {
-            id = 'com.indeed.oss'
-            displayName = 'Indeed OSS Plugin'
-            description = 'Helper plugin for all open-source projects produced by Indeed'
-            implementationClass = 'com.indeed.ossgradle.IndeedOssGradlePlugin'
+    gradlePlugin {
+        plugins {
+            ossPlugin {
+                id = 'com.indeed.oss'
+                displayName = 'Indeed OSS Plugin'
+                description = 'Helper plugin for all open-source projects produced by Indeed'
+                implementationClass = 'com.indeed.ossgradle.IndeedOssGradlePlugin'
+            }
         }
     }
 }
