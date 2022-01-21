@@ -26,6 +26,7 @@ public class IndeedOssLibraryPlugin implements Plugin<Project> {
 
     @Override
     public void apply(final Project project) {
+        project.getPlugins().apply(IndeedOssJavaProjectPlugin.class);
         this.project = project;
         project.getExtensions().create("indeedLibrary", IndeedOssLibraryExtension.class, project);
         project.getPlugins().apply(JavaLibraryPlugin.class);

@@ -20,4 +20,10 @@ public class IndeedOssUtil {
                     fn.run();
                 });
     }
+
+    public static void assertRootProject(final Project project) {
+        if (project != project.getRootProject()) {
+            throw new IllegalStateException("This plugin can only be applied to the root project");
+        }
+    }
 }

@@ -46,9 +46,7 @@ public class IndeedOssLibraryRootPlugin implements Plugin<Project> {
     private Supplier<String> httpUrlSupplier;
 
     public void apply(final Project rootProject) {
-        if (rootProject != rootProject.getRootProject()) {
-            throw new IllegalStateException("This can only be applied to the root project");
-        }
+        IndeedOssUtil.assertRootProject(rootProject);
 
         rootProject
                 .getGradle()

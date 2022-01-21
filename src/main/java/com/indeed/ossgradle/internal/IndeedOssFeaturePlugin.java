@@ -15,6 +15,9 @@ public class IndeedOssFeaturePlugin implements Plugin<Project> {
             ImmutableMap.<String, Class<? extends Plugin<Project>>>builder()
                     .put("gradle-plugin", IndeedOssGradlePluginPlugin.class)
                     .put("library", IndeedOssLibraryPlugin.class)
+                    .put("find-next-version", FindNextVersionPlugin.class)
+                    .put("java", IndeedOssJavaProjectPlugin.class)
+                    .put("spotless", IndeedSpotlessPlugin.class)
                     .build();
 
     private Project project;

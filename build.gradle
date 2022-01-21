@@ -1,27 +1,32 @@
-if ("true".equals(System.getProperty("idea.sync.active"))) {
-    plugins.apply 'java'
-} else {
-    if (gradle.getParent() != null) {
-        plugins.apply 'java-gradle-plugin'
-    } else {
-        plugins.apply 'com.indeed.oss'
-        indeedOss.activateFeature 'gradle-plugin'
-        pluginBundle {
-            website = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
-            vcsUrl = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
-            tags = ['indeed', 'opensource']
-        }
-        indeedLibrary.name = 'indeed-oss-gradle-plugin'
-    }
+final isIntellijSync = "true".equals(System.getProperty("idea.sync.active"))
+final isBuildSrc = gradle.getParent() != null
 
-    gradlePlugin {
-        plugins {
-            ossPlugin {
-                id = 'com.indeed.oss'
-                displayName = 'Indeed OSS Plugin'
-                description = 'Helper plugin for all open-source projects produced by Indeed'
-                implementationClass = 'com.indeed.ossgradle.IndeedOssGradlePlugin'
-            }
+if (isIntellijSync && isBuildSrc) {
+    // Don't use or compile buildSrc at all for intellij sync
+    java.sourceSets.main.java.setSrcDirs([])
+    return
+}
+
+if (isIntellijSync || isBuildSrc) {
+    plugins.apply 'java-gradle-plugin'
+} else {
+    plugins.apply 'com.indeed.oss'
+    indeedOss.activateFeature 'gradle-plugin'
+    pluginBundle {
+        website = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
+        vcsUrl = 'https://github.com/indeedeng/indeed-oss-gradle-plugin'
+        tags = ['indeed', 'opensource']
+    }
+    indeedLibrary.name = 'indeed-oss-gradle-plugin'
+}
+
+gradlePlugin {
+    plugins {
+        ossPlugin {
+            id = 'com.indeed.oss'
+            displayName = 'Indeed OSS Plugin'
+            description = 'Helper plugin for all open-source projects produced by Indeed'
+            implementationClass = 'com.indeed.ossgradle.IndeedOssGradlePlugin'
         }
     }
 }
