@@ -33,6 +33,17 @@ public class IndeedSpotlessPlugin implements Plugin<Project> {
                             "^(import javax\\..*)\n\n(import java\\..*)",
                             "$1\n$2");
                 });
+        ext.kotlin(
+                kotlin -> {
+                    kotlin.toggleOffOn();
+                    kotlin.targetExclude(
+                            project.fileTree(
+                                    project.getBuildDir(), tree -> tree.include("**/*.kt")));
+                    kotlin.trimTrailingWhitespace();
+                    kotlin.endWithNewline();
+                    kotlin.ktlint();
+                }
+        );
         if (IndeedOssLibraryRootPlugin.getCiWorkspace(project) == null) {
             project.getTasks()
                     .withType(AbstractCompile.class)
