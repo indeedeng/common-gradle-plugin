@@ -10,21 +10,17 @@ import org.gradle.api.tasks.compile.AbstractCompile;
 public class IndeedSpotlessPlugin implements Plugin<Project> {
     @Override
     public void apply(final Project project) {
-        project.getPlugins().withType(JavaPlugin.class, p -> applySpotlessJava(project));
-
-        project.getPlugins().withId("kotlin", p -> applySpotlessKotlin(project));
-        project.getPlugins().withId("kotlin-android", p -> applySpotlessKotlin(project));
-        // TODO: Cleanup
-        /*
-        project.getPlugins().withId("org.jetbrains.kotlin.js", p -> applySpotlessKotlin(project));
-        project.getPlugins().withId( "org.jetbrains.kotlin.multiplatform", p -> applySpotlessKotlin(project));
-         */
-    }
-
-    public void applySpotlessJava(final Project project) {
         project.getPlugins().apply(SpotlessPlugin.class);
         final SpotlessExtension ext = project.getExtensions().getByType(SpotlessExtension.class);
         ext.setEnforceCheck(false);
+
+        project.getPlugins().withType(JavaPlugin.class, p -> applySpotlessJava(project, ext));
+
+        project.getPlugins().withId("kotlin", p -> applySpotlessKotlin(project, ext));
+        project.getPlugins().withId("kotlin-android", p -> applySpotlessKotlin(project, ext));
+    }
+
+    public void applySpotlessJava(final Project project, final SpotlessExtension ext) {
         ext.java(
                 java -> {
                     java.toggleOffOn();
@@ -51,17 +47,14 @@ public class IndeedSpotlessPlugin implements Plugin<Project> {
         }
     }
 
-    public void applySpotlessKotlin(final Project project) {
-        project.getPlugins().apply(SpotlessPlugin.class);
-        final SpotlessExtension ext = project.getExtensions().getByType(SpotlessExtension.class);
-        ext.setEnforceCheck(false);
+    public void applySpotlessKotlin(final Project project, final SpotlessExtension ext) {
         ext.kotlin(
                 kotlin -> {
                     kotlin.toggleOffOn();
                     kotlin.targetExclude(
                             project.fileTree(
                                     project.getBuildDir(), tree -> tree.include("**/*.kt")));
-                    kotlin.target("src/**/*.kt");
+                    kotlin.target("**/*.kt", "**/*.kts");
                     kotlin.trimTrailingWhitespace();
                     kotlin.endWithNewline();
                     kotlin.ktlint();
@@ -69,10 +62,13 @@ public class IndeedSpotlessPlugin implements Plugin<Project> {
 
         if (IndeedOssLibraryRootPlugin.getCiWorkspace(project) == null) {
             project.getTasks()
-                    .matching(task -> task.getName().equals("compileKotlin"))
                     .configureEach(
-                            compile -> {
-                                compile.finalizedBy("spotlessApply");
+                            task -> {
+                                if (task.getName().equals("kotlinCompile")
+                                        || (task.getName().startsWith("compile")
+                                                && task.getName().endsWith("Kotlin"))) {
+                                    task.finalizedBy("spotlessApply");
+                                }
                             });
         }
     }
