@@ -51,9 +51,6 @@ public class IndeedSpotlessPlugin implements Plugin<Project> {
         ext.kotlin(
                 kotlin -> {
                     kotlin.toggleOffOn();
-                    kotlin.targetExclude(
-                            project.fileTree(
-                                    project.getBuildDir(), tree -> tree.include("**/*.kt")));
                     kotlin.target("**/*.kt", "**/*.kts");
                     kotlin.trimTrailingWhitespace();
                     kotlin.endWithNewline();
