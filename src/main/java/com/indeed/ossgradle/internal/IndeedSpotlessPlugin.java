@@ -10,13 +10,17 @@ import org.gradle.api.tasks.compile.AbstractCompile;
 public class IndeedSpotlessPlugin implements Plugin<Project> {
     @Override
     public void apply(final Project project) {
-        project.getPlugins().withType(JavaPlugin.class, p -> applySpotless(project));
-    }
-
-    public void applySpotless(final Project project) {
         project.getPlugins().apply(SpotlessPlugin.class);
         final SpotlessExtension ext = project.getExtensions().getByType(SpotlessExtension.class);
         ext.setEnforceCheck(false);
+
+        project.getPlugins().withType(JavaPlugin.class, p -> applySpotlessJava(project, ext));
+
+        project.getPlugins().withId("kotlin", p -> applySpotlessKotlin(project, ext));
+        project.getPlugins().withId("kotlin-android", p -> applySpotlessKotlin(project, ext));
+    }
+
+    public void applySpotlessJava(final Project project, final SpotlessExtension ext) {
         ext.java(
                 java -> {
                     java.toggleOffOn();
@@ -39,6 +43,29 @@ public class IndeedSpotlessPlugin implements Plugin<Project> {
                     .configureEach(
                             compile -> {
                                 compile.finalizedBy("spotlessApply");
+                            });
+        }
+    }
+
+    public void applySpotlessKotlin(final Project project, final SpotlessExtension ext) {
+        ext.kotlin(
+                kotlin -> {
+                    kotlin.toggleOffOn();
+                    kotlin.target("**/*.kt", "**/*.kts");
+                    kotlin.trimTrailingWhitespace();
+                    kotlin.endWithNewline();
+                    kotlin.ktlint();
+                });
+
+        if (IndeedOssLibraryRootPlugin.getCiWorkspace(project) == null) {
+            project.getTasks()
+                    .configureEach(
+                            task -> {
+                                if (task.getName().equals("kotlinCompile")
+                                        || (task.getName().startsWith("compile")
+                                                && task.getName().endsWith("Kotlin"))) {
+                                    task.finalizedBy("spotlessApply");
+                                }
                             });
         }
     }
